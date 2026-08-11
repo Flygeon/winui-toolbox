@@ -31,14 +31,42 @@
 
         <div class="settings-row">
           <div class="settings-row-label">
-            <span class="settings-row-name">侧边栏</span>
-            <span class="settings-row-hint">是否保持展开状态</span>
+            <span class="settings-row-name">始终展开侧边栏</span>
+            <span class="settings-row-hint">开启后侧边栏常驻展开，切换工具不会收起</span>
           </div>
           <WinToggleSwitch
-            :IsOn="settings.paneOpen"
-            OnContent="展开"
-            OffContent="收起"
-            @update:IsOn="settings.setPaneOpen($event)" />
+            :IsOn="settings.sidebarAlwaysExpanded"
+            OnContent="开"
+            OffContent="关"
+            @update:IsOn="settings.setSidebarAlwaysExpanded($event)" />
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="settings-section-title">个性化</h2>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">记住最后使用的工具</span>
+            <span class="settings-row-hint">启动时自动打开上次使用的工具</span>
+          </div>
+          <WinToggleSwitch
+            :IsOn="settings.resumeLastTool"
+            OnContent="开"
+            OffContent="关"
+            @update:IsOn="settings.setResumeLastTool($event)" />
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">记忆窗口尺寸与位置</span>
+            <span class="settings-row-hint">关闭后恢复默认窗口大小与位置</span>
+          </div>
+          <WinToggleSwitch
+            :IsOn="settings.rememberWindow"
+            OnContent="开"
+            OffContent="关"
+            @update:IsOn="settings.setRememberWindow($event)" />
         </div>
       </section>
 

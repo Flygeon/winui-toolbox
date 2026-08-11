@@ -66,10 +66,10 @@ export const toolModules: ToolModuleDef[] = [
       ready("hash", "哈希与加解密", "MD5 / SHA 系列哈希与 AES 加解密", "", () => import("@/tools/hash/index.vue")),
       ready("qrcode", "二维码生成", "生成文本、网址、Wi-Fi 二维码", "", () => import("@/tools/qrcode/index.vue")),
       ready("uuid", "UUID / 随机密码", "批量生成 UUID 与高强度随机密码", "", () => import("@/tools/uuid/index.vue")),
-      ready("jwt", "JWT 调试", "解码并校验 JWT Token", "", () => import("@/tools/jwt/index.vue")),
+      ready("jwt", "JWT 调试", "解码并校验 JWT Token", "", () => import("@/tools/jwt/index.vue")),
       ready("regex", "正则测试", "正则表达式匹配测试与常用速查", "", () => import("@/tools/regex/index.vue")),
-      planned("cron", "Cron 表达式", "可视化解析 Cron 表达式与未来执行时间预览", "", 2, ["可视化解析 Cron 表达式的含义", "预览未来 N 次执行时间", "常用 Cron 模板（每分钟/每小时/每天等）"]),
-      planned("network", "IP / 网络工具", "本地 IP 查询、Ping、端口连通性检测", "", 2, ["本机 IP 与网络接口信息查询", "Ping 延迟测试", "端口连通性检测与子网计算"]),
+      ready("cron", "Cron 表达式", "可视化解析 Cron 表达式与未来执行时间预览", "", () => import("@/tools/cron/index.vue")),
+      ready("network", "IP / 网络工具", "本机 IP 查询与子网掩码计算", "", () => import("@/tools/network/index.vue")),
     ],
   },
   {

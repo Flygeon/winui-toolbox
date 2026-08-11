@@ -8,6 +8,15 @@
   font-display: block;
 }
 
+/* 所有带 .icon 的元素默认使用图标字体，缺失字形回退到系统 Segoe MDL2 Assets
+   （与模板 gallery 的全局规则一致，修复导航/按钮图标显示为占位矩形的问题） */
+body .icon,
+body .icon-btn,
+body .icon-glyph,
+body .icon-preview-glyph {
+  font-family: "WinUIOnWebIcons", "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif;
+}
+
 html,
 body,
 #app {

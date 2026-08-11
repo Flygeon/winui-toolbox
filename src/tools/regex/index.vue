@@ -39,16 +39,32 @@
         </div>
       </div>
     </div>
+
+    <div class="tb-card">
+      <div class="tb-row">
+        <p class="tb-title tb-grow">查找替换</p>
+        <button type="button" class="tb-btn tb-btn-primary" @click="replaceAll">全部替换</button>
+        <CopyButton :text="replaceResult" />
+      </div>
+      <WinTextBox
+        v-model:Text="replacement"
+        PlaceholderText="替换为…（可用 $1、$2 引用捕获组）"
+        Height="38" />
+      <div v-if="replaceResult" class="tb-output">{{ replaceResult }}</div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
+import CopyButton from "@/components/CopyButton.vue";
 
 const pattern = ref("");
 const flags = ref("gi");
 const text = ref("");
+const replacement = ref("");
+const replaceResult = ref("");
 
 const regexError = ref("");
 interface RegexMatch {
@@ -134,6 +150,20 @@ function scheduleRun() {
 }
 
 watch([pattern, flags, text], scheduleRun);
+
+function replaceAll() {
+  if (!pattern.value) {
+    replaceResult.value = text.value;
+    return;
+  }
+  try {
+    const hasG = flags.value.includes("g");
+    const re = new RegExp(pattern.value, hasG ? flags.value : flags.value + "g");
+    replaceResult.value = text.value.replace(re, replacement.value);
+  } catch (e) {
+    replaceResult.value = `替换失败：${(e as Error).message}`;
+  }
+}
 </script>
 
 <style scoped>

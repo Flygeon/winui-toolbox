@@ -81,12 +81,38 @@
         </div>
       </div>
     </div>
+
+    <div class="tb-card">
+      <p class="tb-title">解析二维码（本地识别）</p>
+      <div class="tb-row">
+        <label class="tb-btn qr-choose" for="qr-decode-input">选择图片…</label>
+        <input
+          id="qr-decode-input"
+          type="file"
+          accept="image/*"
+          class="qr-file-input"
+          @change="onDecodeFile" />
+        <span class="tb-hint">或直接 <kbd>Ctrl+V</kbd> 粘贴图片</span>
+        <CopyButton :text="decodeResult" />
+      </div>
+      <div
+        class="qr-preview"
+        tabindex="0"
+        @paste="onPasteDecode"
+        @keydown.ctrl.prevent="undefined">
+        <img v-if="decodeImageUrl" :src="decodeImageUrl" alt="待识别图片" class="qr-image" />
+        <p v-else class="tb-hint">选择或粘贴二维码图片后在此预览并识别…</p>
+      </div>
+      <p v-if="decodeError" class="tb-error">{{ decodeError }}</p>
+      <div v-if="decodeResult" class="tb-output">{{ decodeResult }}</div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, watch } from "vue";
 import QRCode from "qrcode";
+import jsQR from "jsqr";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 
 const qrType = ref<"text" | "wifi">("text");
@@ -131,6 +157,56 @@ function schedule() {
 }
 
 watch([qrType, qrText, () => wifi.ssid, () => wifi.password, () => wifi.encryption, ecLevel, qrSize], schedule);
+
+// ---- 解析 ----
+const decodeError = ref("");
+const decodeResult = ref("");
+const decodeImageUrl = ref("");
+
+function onDecodeFile(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  decodeError.value = "";
+  decodeResult.value = "";
+  const url = URL.createObjectURL(file);
+  decodeImageUrl.value = url;
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      decodeError.value = "无法创建画布。";
+      return;
+    }
+    ctx.drawImage(img, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h);
+    const code = jsQR(data.data, w, h);
+    decodeResult.value = code ? code.data : "未能识别二维码，请尝试更清晰、对比度更高的图片。";
+  };
+  img.onerror = () => {
+    decodeError.value = "图片加载失败。";
+  };
+  img.src = url;
+}
+
+function onPasteDecode(e: ClipboardEvent) {
+  const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
+  if (!item) return;
+  const file = item.getAsFile();
+  if (!file) return;
+  const input = document.createElement("input");
+  // 复用同一解码逻辑
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  onDecodeFile({ target: input } as unknown as Event);
+}
 </script>
 
 <style scoped>
@@ -162,5 +238,25 @@ watch([qrType, qrText, () => wifi.ssid, () => wifi.password, () => wifi.encrypti
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+}
+
+.qr-file-input {
+  display: none;
+}
+
+.qr-choose {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+kbd {
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.62));
 }
 </style>
