@@ -1,0 +1,308 @@
+/* ===== WinUI Toolbox 全局样式 ===== */
+
+/* 图标字体：WinUIonWeb 组件内部依赖该字体渲染字形（如标题栏按钮、导航图标）。
+   模板只在 WinMediaPlayerElement 内联声明，这里全局声明以保证任何组件可用。 */
+@font-face {
+  font-family: "WinUIOnWebIcons";
+  src: url("../winui/assets/Fonts/SEGOEICONS.TTF") format("truetype");
+  font-display: block;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--app-bg, #f3f3f3);
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 工具页标题（ToolView 与 SettingsView 共用） */
+.tool-view-header {
+  flex: none;
+  padding: 20px 28px 16px;
+}
+
+.tool-view-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+}
+
+.tool-view-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.62));
+}
+
+/* 细滚动条，贴近 WinUI 风格 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ctrl-fill-tertiary, rgba(0, 0, 0, 0.3));
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ctrl-fill-secondary, rgba(0, 0, 0, 0.45));
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 文本域/输入框在深色主题下保持可读 */
+textarea,
+input,
+select {
+  color-scheme: light dark;
+}
+
+/* ===== 工具页共用样式 ===== */
+.tb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tb-card {
+  background: var(--card-bg, rgba(255, 255, 255, 0.7));
+  border: 1px solid var(--card-stroke, rgba(0, 0, 0, 0.06));
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tb-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+}
+
+.tb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tb-row-label {
+  flex: none;
+  min-width: 64px;
+  font-size: 12px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.62));
+}
+
+.tb-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tb-output {
+  background: var(--card-bg-secondary, rgba(246, 246, 246, 0.5));
+  border: 1px solid var(--card-stroke, rgba(0, 0, 0, 0.06));
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: "Cascadia Mono", "Consolas", "Courier New", monospace;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  max-height: 320px;
+  overflow: auto;
+}
+
+.tb-error {
+  color: #c42b1c;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.tb-hint {
+  font-size: 12px;
+  color: var(--text-tertiary, rgba(0, 0, 0, 0.4458));
+}
+
+.tb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+  cursor: pointer;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  transition: background 120ms ease;
+}
+
+.tb-chip:hover {
+  background: var(--ctrl-fill-tertiary, rgba(249, 249, 249, 0.8));
+}
+
+/* 通用小按钮（WinButton 之外的轻量操作） */
+.tb-btn {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.tb-btn:hover {
+  background: var(--ctrl-fill-tertiary, rgba(249, 249, 249, 0.8));
+}
+
+.tb-btn:active {
+  background: var(--ctrl-fill-default, rgba(255, 255, 255, 0.7));
+}
+
+.tb-btn-primary {
+  background: var(--accent-aa-fill, #004e8c);
+  border-color: transparent;
+  color: var(--accent-aa-text, #ffffff);
+}
+
+.tb-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+/* 原生控件中性化样式，配合 WinUI 主题变量 */
+.nb-input {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.nb-input:focus {
+  border-color: var(--accent-base, #0067c0);
+}
+
+.nb-select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.nb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  cursor: pointer;
+  user-select: none;
+}
+
+.nb-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-base, #0067c0);
+  cursor: pointer;
+}
+
+.datetime-input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.datetime-input:focus {
+  border-color: var(--accent-base, #0067c0);
+}
+
+/* 分段控件（设置页主题选择与工具内 Tab 复用） */
+.nb-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--ctrl-fill-secondary, rgba(249, 249, 249, 0.5));
+  border: 1px solid var(--ctrl-border, rgba(0, 0, 0, 0.06));
+}
+
+.nb-segmented-item {
+  border: none;
+  background: transparent;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.nb-segmented-item:hover {
+  background: var(--ctrl-fill-tertiary, rgba(249, 249, 249, 0.8));
+}
+
+.nb-segmented-item.is-active {
+  background: var(--accent-aa-fill, #004e8c);
+  color: var(--accent-aa-text, #ffffff);
+}
+
+/* 工具内两栏布局 */
+.tb-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .tb-two-col {
+    grid-template-columns: 1fr;
+  }
+}
