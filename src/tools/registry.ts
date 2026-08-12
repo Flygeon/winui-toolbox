@@ -80,10 +80,10 @@ export const toolModules: ToolModuleDef[] = [
       ready("text", "文本处理", "字数统计、大小写转换、行操作", "", () => import("@/tools/text/index.vue")),
       ready("mask", "敏感信息脱敏", "身份证、手机号、银行卡一键掩码", "", () => import("@/tools/mask/index.vue")),
       ready("diff", "文本比对", "文本行级差异对比（Diff）", "", () => import("@/tools/diff/index.vue")),
-      planned("markdown", "Markdown 编辑器", "实时预览、语法高亮、导出 HTML", "", 2, ["Markdown 实时预览", "常用语法高亮", "导出 HTML / 复制到剪贴板"]),
-      planned("mdconvert", "Markdown 转 PDF / Word", "将 Markdown 导出为排版精美的 PDF 或 Word", "", 2, ["Markdown → PDF", "Markdown → Word (docx)", "样式与主题设置"]),
-      planned("tables", "表格数据转换", "CSV / JSON / Excel 之间的互相转换", "", 2, ["CSV ↔ JSON", "Excel ↔ CSV / JSON", "轻量级表格预览"]),
-      planned("pdf", "PDF 工具集", "PDF 合并、拆分、加密、压缩", "", 3, ["PDF 合并与拆分", "PDF 加密 / 解密", "PDF 压缩"]),
+      ready("markdown", "Markdown 编辑器", "实时预览、语法高亮、导出 HTML / Word / PDF", "", () => import("@/tools/markdown/index.vue")),
+      ready("mdconvert", "Markdown 转 PDF / Word", "将 Markdown 导出为 .docx 或打印为 PDF", "", () => import("@/tools/mdconvert/index.vue")),
+      ready("tables", "表格数据转换", "CSV / JSON / Markdown 表格互转", "", () => import("@/tools/tables/index.vue")),
+      ready("pdf", "PDF 工具集", "PDF 合并、拆分、旋转、加密、解密", "", () => import("@/tools/pdf/index.vue")),
     ],
   },
   {
@@ -113,7 +113,7 @@ export const toolModules: ToolModuleDef[] = [
       planned("lan", "局域网快传", "局域网点对点文件传输", "", 4, ["局域网设备发现", "P2P 文件传输", "传输进度与断点续传"]),
       planned("env", "环境变量管理", "可视化查看、编辑 Windows 环境变量", "", 4, ["用户 / 系统变量浏览", "安全编辑与备份", "路径 PATH 管理"]),
       planned("port", "端口占用查询", "查看端口占用并一键结束进程", "", 4, ["按端口 / PID 查询", "进程信息展示", "一键结束进程"]),
-      planned("pomodoro", "番茄钟 / 白噪音", "番茄钟专注计时与本地白噪音", "", 4, ["番茄钟计时器", "任务记录", "本地白噪音播放"]),
+      ready("pomodoro", "番茄钟 / 白噪音", "番茄钟专注计时与本地白噪音", "", () => import("@/tools/pomodoro/index.vue")),
     ],
   },
 ];
