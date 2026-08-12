@@ -183,8 +183,11 @@ async fn list_ports() -> Result<Vec<PortInfo>, String> {
 /// 强杀指定 PID 进程（taskkill /F）。
 #[tauri::command]
 fn kill_process(pid: i32) -> Result<String, String> {
+    let pid_str = pid.to_string();
     let out = std::process::Command::new("taskkill")
-        .args(["/F", "/PID", &pid.to_string()])
+        .arg("/F")
+        .arg("/PID")
+        .arg(&pid_str)
         .output()
         .map_err(|e| e.to_string())?;
     if out.status.success() {
@@ -238,7 +241,7 @@ async fn get_system_stats() -> Result<SystemStats, String> {
             mem_used: sys.used_memory(),
             swap_total: sys.total_swap(),
             swap_used: sys.used_swap(),
-            uptime: sys.uptime(),
+            uptime: sysinfo::System::uptime(),
             hostname: sysinfo::System::host_name().unwrap_or_default(),
             disks,
         })
@@ -276,13 +279,13 @@ fn decode_reg_string(rv: &winreg::RegValue) -> Option<String> {
 #[tauri::command]
 fn list_user_env_vars() -> Vec<EnvVar> {
     let mut out = Vec::new();
-    if let Ok(hkcu) = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER) {
-        if let Ok(env) = hkcu.open_subkey("Environment") {
-            for item in env.enum_values() {
-                if let Ok((name, rv)) = item {
-                    if let Some(value) = decode_reg_string(&rv) {
-                        out.push(EnvVar { name, value });
-                    }
+    // winreg 0.52 的 predef 直接返回 RegKey（非 Result）
+    let hkcu = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER);
+    if let Ok(env) = hkcu.open_subkey("Environment") {
+        for item in env.enum_values() {
+            if let Ok((name, rv)) = item {
+                if let Some(value) = decode_reg_string(&rv) {
+                    out.push(EnvVar { name, value });
                 }
             }
         }
@@ -301,7 +304,8 @@ fn set_user_env_var(name: String, value: String) -> Result<(), String> {
         return Err("变量名不能为空".to_string());
     }
     let out = std::process::Command::new("setx")
-        .args([&name, &value])
+        .arg(&name)
+        .arg(&value)
         .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map_err(|e| e.to_string())?;
@@ -317,7 +321,11 @@ fn set_user_env_var(name: String, value: String) -> Result<(), String> {
 fn delete_user_env_var(name: String) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
     let out = std::process::Command::new("reg")
-        .args(["delete", r"HKCU\Environment", "/v", &name, "/f"])
+        .arg("delete")
+        .arg(r"HKCU\Environment")
+        .arg("/v")
+        .arg(&name)
+        .arg("/f")
         .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map_err(|e| e.to_string())?;
