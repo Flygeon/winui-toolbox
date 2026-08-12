@@ -226,8 +226,9 @@ async fn get_system_stats() -> Result<SystemStats, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let mut sys = sysinfo::System::new_all();
         sys.refresh_all();
-        let disks = sys
-            .disks()
+        // sysinfo 0.30 通过 Disks::new_with_refreshed_list() 获取磁盘
+        let disks = sysinfo::Disks::new_with_refreshed_list()
+            .list()
             .iter()
             .map(|d| DiskInfo {
                 mount: d.mount_point().to_string_lossy().to_string(),
