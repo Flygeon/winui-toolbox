@@ -48,6 +48,7 @@
         <img v-if="resultUrl" :src="resultUrl" alt="转换结果" class="image-preview-img" />
         <p v-else class="tb-hint">转换结果将在此预览…</p>
       </div>
+      <DownloadedBar :path="savedPath" />
     </div>
   </div>
 </template>
@@ -55,13 +56,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { loadImageFromFile, drawScaled, canvasToBlob } from "@/utils/image";
-import { downloadBytes } from "@/utils/download";
+import { saveFileBytes } from "@/utils/file-save";
+import DownloadedBar from "@/components/DownloadedBar.vue";
 
 const sourceUrl = ref("");
 const resultUrl = ref("");
 const fileName = ref("");
 const sourceSize = ref(0);
 const resultSize = ref(0);
+const savedPath = ref<string | null>(null);
 const format = ref<"png" | "jpeg" | "webp">("png");
 const quality = ref(90);
 const maxWidth = ref(0);
@@ -77,6 +80,7 @@ async function onFile(e: Event) {
   const file = input.files?.[0];
   if (!file) return;
   error.value = "";
+  savedPath.value = null;
   try {
     sourceImage = await loadImageFromFile(file);
     sourceUrl.value = URL.createObjectURL(file);
@@ -102,12 +106,11 @@ watch([format, quality, maxWidth], () => {
   void regenerate();
 });
 
-function download() {
+async function download() {
   if (!resultBlob) return;
   const base = fileName.value.split(".").slice(0, -1).join(".") || "image";
-  void resultBlob.arrayBuffer().then((buf) => {
-    downloadBytes(new Uint8Array(buf), `${base}.${format.value}`, mimeOf.value);
-  });
+  const bytes = new Uint8Array(await resultBlob.arrayBuffer());
+  savedPath.value = await saveFileBytes(bytes, `${base}.${format.value}`, mimeOf.value);
 }
 </script>
 

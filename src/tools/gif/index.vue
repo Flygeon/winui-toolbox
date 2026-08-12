@@ -44,7 +44,7 @@
           <span v-if="busy" class="tb-hint">正在调用本地 FFmpeg 处理…</span>
         </div>
         <p v-if="error" class="tb-error">{{ error }}</p>
-        <p v-if="done" class="gif-done">✓ GIF 已生成：{{ outputPath }}</p>
+        <DownloadedBar :path="done ? outputPath : null" />
       </div>
     </template>
   </div>
@@ -54,9 +54,13 @@
 import { computed, onMounted, ref } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import FfmpegGate from "@/components/FfmpegGate.vue";
+import DownloadedBar from "@/components/DownloadedBar.vue";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { join } from "@tauri-apps/api/path";
+import { useSettingsStore } from "@/stores/settings";
 import { resolveFfmpeg, runFfmpeg, FFMPEG_MISSING } from "@/utils/ffmpeg";
 
+const settings = useSettingsStore();
 const hasTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 const ffmpegReady = ref<boolean | null>(null);
@@ -82,14 +86,22 @@ async function pickInput() {
     inputPath.value = sel as string;
     done.value = false;
     error.value = "";
+    await autoFillOutput();
   }
+}
+
+async function autoFillOutput() {
+  if (!inputPath.value || !settings.downloadDir) return;
+  const base = inputName.value.split(".").slice(0, -1).join(".") || "video";
+  outputPath.value = await join(settings.downloadDir, `${base}.gif`);
 }
 
 async function pickOutput() {
   if (!hasTauri || !inputPath.value) return;
   const base = inputName.value.split(".").slice(0, -1).join(".") || "video";
+  const defaultPath = outputPath.value || (settings.downloadDir ? await join(settings.downloadDir, `${base}.gif`) : `${base}.gif`);
   const sel = await save({
-    defaultPath: `${base}.gif`,
+    defaultPath,
     filters: [{ name: "GIF", extensions: ["gif"] }],
   });
   if (sel) {
@@ -129,12 +141,5 @@ onMounted(async () => {
 .gif-duration {
   width: 120px;
   flex: none;
-}
-
-.gif-done {
-  color: #0f7b0f;
-  font-size: 13px;
-  margin: 4px 0 0;
-  word-break: break-all;
 }
 </style>

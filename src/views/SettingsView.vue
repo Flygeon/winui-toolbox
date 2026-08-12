@@ -71,6 +71,22 @@
       </section>
 
       <section class="settings-section">
+        <h2 class="settings-section-title">保存</h2>
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">文件保存目录</span>
+            <span v-if="settings.downloadDir" class="settings-row-hint">转换 / 下载结果默认保存到该目录</span>
+            <span v-else class="settings-row-hint">未设置，每次保存时询问位置</span>
+          </div>
+          <button type="button" class="tb-btn tb-btn-primary" @click="pickDownloadDir">选择目录…</button>
+        </div>
+        <div v-if="settings.downloadDir" class="settings-row">
+          <code class="settings-ffmpeg-path" :title="settings.downloadDir">{{ settings.downloadDir }}</code>
+          <button type="button" class="tb-btn" @click="settings.setDownloadDir(null)">清除</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
         <h2 class="settings-section-title">FFmpeg（音视频工具）</h2>
 
         <div class="settings-row">
@@ -172,6 +188,17 @@ const modes: { value: ThemeMode; label: string }[] = [
   { value: "dark", label: "深色" },
   { value: "system", label: "跟随系统" },
 ];
+
+// ---- 文件保存目录 ----
+async function pickDownloadDir() {
+  if (!hasTauri) return;
+  try {
+    const sel = await open({ directory: true, multiple: false });
+    if (sel) await settings.setDownloadDir(sel as string);
+  } catch {
+    /* 忽略 */
+  }
+}
 
 // ---- FFmpeg ----
 const scanning = ref(false);

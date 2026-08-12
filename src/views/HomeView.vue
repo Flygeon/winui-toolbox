@@ -401,9 +401,11 @@ onMounted(() => {
 }
 
 /* 主页图标字形：非 .icon class，需显式指定图标字体栈（否则 Segoe UI 无字形 → 矩形） */
+.home-search-icon,
 .home-search-result-icon,
 .home-tool-chip-icon,
-.home-module-icon {
+.home-module-icon,
+.home-module-arrow {
   font-family: "WinUIOnWebIcons", "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif;
 }
 

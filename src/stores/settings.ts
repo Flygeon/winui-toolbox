@@ -27,6 +27,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const ffmpegPath = ref<string | null>(null);
   const ffmpegVersion = ref<string | null>(null);
   const minimizeToTray = ref(true);
+  const downloadDir = ref<string | null>(null);
   let store: Awaited<ReturnType<typeof load>> | null = null;
   let initPromise: Promise<void> | null = null;
 
@@ -53,6 +54,7 @@ export const useSettingsStore = defineStore("settings", () => {
       windowBounds: windowBounds.value,
       ffmpegPath: ffmpegPath.value,
       minimizeToTray: minimizeToTray.value,
+      downloadDir: downloadDir.value,
     };
     if (store) {
       try {
@@ -90,6 +92,8 @@ export const useSettingsStore = defineStore("settings", () => {
         const fp = await store.get<string | null>("ffmpegPath");
         if (typeof fp === "string") ffmpegPath.value = fp;
         minimizeToTray.value = readBool(await store.get<boolean>("minimizeToTray"));
+        const dd = await store.get<string | null>("downloadDir");
+        if (typeof dd === "string") downloadDir.value = dd;
       } catch {
         store = null;
         const t = localStorage.getItem("toolbox.theme");
@@ -101,6 +105,8 @@ export const useSettingsStore = defineStore("settings", () => {
         const fp = localStorage.getItem("toolbox.ffmpegPath");
         if (fp && fp !== "null") ffmpegPath.value = fp;
         minimizeToTray.value = localStorage.getItem("toolbox.minimizeToTray") !== "false";
+        const dd = localStorage.getItem("toolbox.downloadDir");
+        if (dd && dd !== "null") downloadDir.value = dd;
         try {
           const raw = localStorage.getItem("toolbox.windowBounds");
           if (raw) windowBounds.value = JSON.parse(raw);
@@ -157,6 +163,11 @@ export const useSettingsStore = defineStore("settings", () => {
     await persist();
   }
 
+  async function setDownloadDir(path: string | null) {
+    downloadDir.value = path;
+    await persist();
+  }
+
   /** 最小化到托盘：持久化 + 通知 Rust 端拦截关闭 */
   async function setMinimizeToTray(v: boolean) {
     minimizeToTray.value = v;
@@ -196,6 +207,7 @@ export const useSettingsStore = defineStore("settings", () => {
     ffmpegPath,
     ffmpegVersion,
     minimizeToTray,
+    downloadDir,
     resolvedTheme,
     init,
     applyTheme,
@@ -207,6 +219,7 @@ export const useSettingsStore = defineStore("settings", () => {
     setFfmpeg,
     setFfmpegVersion,
     clearFfmpeg,
+    setDownloadDir,
     setMinimizeToTray,
     saveWindowBounds,
     cycleTheme,

@@ -23,9 +23,10 @@
         </div>
       </div>
       <div class="tb-row icon-actions">
-        <button type="button" class="tb-btn tb-btn-primary" @click="downloadAll">逐个下载全部</button>
+        <button type="button" class="tb-btn tb-btn-primary" @click="downloadAll">下载全部尺寸</button>
         <span class="tb-hint">如需 .ico 单文件图标，可用生成的 256px PNG 在设置中替换应用图标（npx tauri icon）。</span>
       </div>
+      <DownloadedBar :path="savedPath" />
     </div>
   </div>
 </template>
@@ -33,7 +34,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { loadImageFromFile, drawExact, canvasToBlob } from "@/utils/image";
-import { downloadBytes } from "@/utils/download";
+import { saveFileBytes } from "@/utils/file-save";
+import DownloadedBar from "@/components/DownloadedBar.vue";
 
 const SIZES = [16, 32, 48, 64, 128, 256, 512];
 
@@ -47,6 +49,7 @@ const sourceUrl = ref("");
 const fileName = ref("");
 const sourceSize = ref(0);
 const icons = ref<IconItem[]>([]);
+const savedPath = ref<string | null>(null);
 const error = ref("");
 
 let sourceImage: HTMLImageElement | null = null;
@@ -56,6 +59,7 @@ async function onFile(e: Event) {
   const file = input.files?.[0];
   if (!file) return;
   error.value = "";
+  savedPath.value = null;
   try {
     sourceImage = await loadImageFromFile(file);
     sourceUrl.value = URL.createObjectURL(file);
@@ -72,17 +76,15 @@ async function onFile(e: Event) {
   }
 }
 
-function downloadOne(ic: IconItem) {
-  void ic.blob.arrayBuffer().then((buf) => {
-    downloadBytes(new Uint8Array(buf), `icon-${ic.size}px.png`, "image/png");
-  });
+async function downloadOne(ic: IconItem) {
+  const bytes = new Uint8Array(await ic.blob.arrayBuffer());
+  savedPath.value = await saveFileBytes(bytes, `icon-${ic.size}px.png`, "image/png");
 }
 
-function downloadAll() {
-  // 逐个下载（浏览器限制），间隔 300ms 避免被拦截
-  icons.value.forEach((ic, i) => {
-    setTimeout(() => downloadOne(ic), i * 300);
-  });
+async function downloadAll() {
+  for (const ic of icons.value) {
+    await downloadOne(ic);
+  }
 }
 </script>
 
