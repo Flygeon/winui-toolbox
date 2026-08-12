@@ -16,6 +16,9 @@
     "core:window:allow-set-size",
     "dialog:default",
     "store:default",
+    "autostart:default",
+    "opener:default",
+    "opener:allow-open-url",
     "fs:default",
     {
       "identifier": "fs:allow-read-file",

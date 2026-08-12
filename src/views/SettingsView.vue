@@ -71,6 +71,77 @@
       </section>
 
       <section class="settings-section">
+        <h2 class="settings-section-title">FFmpeg（音视频工具）</h2>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">状态</span>
+            <span v-if="settings.ffmpegPath" class="settings-row-hint">已配置 · {{ settings.ffmpegVersion || "路径已设置" }}</span>
+            <span v-else class="settings-row-hint">未配置，音视频转换工具暂不可用</span>
+          </div>
+        </div>
+
+        <div v-if="settings.ffmpegPath" class="settings-row">
+          <code class="settings-ffmpeg-path" :title="settings.ffmpegPath">{{ settings.ffmpegPath }}</code>
+          <button type="button" class="tb-btn" @click="settings.clearFfmpeg()">清除</button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">自动扫描 PATH</span>
+            <span class="settings-row-hint">在系统 PATH 目录中查找 ffmpeg.exe</span>
+          </div>
+          <button type="button" class="tb-btn" :disabled="scanning" @click="scanFfmpeg">
+            {{ scanning ? "扫描中…" : "扫描" }}
+          </button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">手动选择</span>
+            <span class="settings-row-hint">选择本地 ffmpeg.exe 文件</span>
+          </div>
+          <button type="button" class="tb-btn tb-btn-primary" @click="pickFfmpeg">选择文件…</button>
+        </div>
+
+        <p v-if="!settings.ffmpegPath" class="settings-ffmpeg-download">
+          未检测到 FFmpeg，可前往官网下载 Windows 全功能构建，或复制下载链接：
+          <span class="settings-ffmpeg-url">{{ FFMPEG_DOWNLOAD_URL }}</span>
+          <button type="button" class="tb-btn tb-btn-mini" @click="openDownload">打开下载页</button>
+        </p>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="settings-section-title">系统</h2>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">开机自启</span>
+            <span class="settings-row-hint">登录 Windows 后自动启动工具箱</span>
+          </div>
+          <WinToggleSwitch
+            :IsOn="autostartEnabled"
+            OnContent="开"
+            OffContent="关"
+            @update:IsOn="toggleAutostart" />
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            <span class="settings-row-name">最小化到托盘</span>
+            <span class="settings-row-hint">关闭窗口时隐藏到系统托盘而不是退出</span>
+          </div>
+          <WinToggleSwitch
+            :IsOn="settings.minimizeToTray"
+            OnContent="开"
+            OffContent="关"
+            @update:IsOn="settings.setMinimizeToTray($event)" />
+        </div>
+
+        <p class="settings-tray-hint">应用常驻系统托盘：左键点击图标显示主窗口，右键菜单可「显示主窗口 / 退出」。</p>
+      </section>
+
+      <section class="settings-section">
         <h2 class="settings-section-title">关于</h2>
         <p class="settings-about-name">WinUI Toolbox v{{ appVersion }}</p>
         <p class="settings-about-sub">本地优先 · 离线可用 · 数据不出设备</p>
@@ -81,10 +152,18 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import { useSettingsStore, type ThemeMode } from "@/stores/settings";
 import WinToggleSwitch from "@/winui/components/WinToggleSwitch.vue";
+import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { FFMPEG_DOWNLOAD_URL, resolveFfmpeg } from "@/utils/ffmpeg";
 
 const settings = useSettingsStore();
+
+const hasTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 const appVersion = "0.1.0";
 
@@ -93,6 +172,78 @@ const modes: { value: ThemeMode; label: string }[] = [
   { value: "dark", label: "深色" },
   { value: "system", label: "跟随系统" },
 ];
+
+// ---- FFmpeg ----
+const scanning = ref(false);
+
+async function scanFfmpeg() {
+  if (!hasTauri) return;
+  scanning.value = true;
+  try {
+    await resolveFfmpeg();
+  } finally {
+    scanning.value = false;
+  }
+}
+
+async function pickFfmpeg() {
+  if (!hasTauri) return;
+  try {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "FFmpeg", extensions: ["exe"] }],
+    });
+    if (!selected) return;
+    const path = selected as string;
+    let version = "";
+    try {
+      version = await invoke<string>("get_ffmpeg_version", { path });
+    } catch {
+      version = "";
+    }
+    if (!version) {
+      await settings.setFfmpeg(path, "（文件可执行，但未返回版本信息）");
+    } else {
+      await settings.setFfmpeg(path, version);
+    }
+  } catch {
+    /* 忽略 */
+  }
+}
+
+async function openDownload() {
+  if (!hasTauri) return;
+  try {
+    await openUrl(FFMPEG_DOWNLOAD_URL);
+  } catch {
+    /* 忽略 */
+  }
+}
+
+// ---- 开机自启 ----
+const autostartEnabled = ref(false);
+
+async function refreshAutostart() {
+  if (!hasTauri) return;
+  try {
+    autostartEnabled.value = await isEnabled();
+  } catch {
+    autostartEnabled.value = false;
+  }
+}
+
+async function toggleAutostart(v: boolean) {
+  if (!hasTauri) return;
+  try {
+    if (v) await enable();
+    else await disable();
+    autostartEnabled.value = await isEnabled();
+  } catch {
+    autostartEnabled.value = false;
+  }
+}
+
+onMounted(refreshAutostart);
 </script>
 
 <style scoped>
@@ -198,5 +349,44 @@ const modes: { value: ThemeMode; label: string }[] = [
   margin: 0;
   font-size: 12px;
   color: var(--text-secondary, rgba(0, 0, 0, 0.62));
+}
+
+.settings-ffmpeg-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  color: var(--text-primary, rgba(0, 0, 0, 0.8956));
+}
+
+.settings-ffmpeg-download {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.62));
+}
+
+.settings-ffmpeg-url {
+  display: block;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 11px;
+  color: var(--accent-base, #0067c0);
+  word-break: break-all;
+}
+
+.tb-btn-mini {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.settings-tray-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary, rgba(0, 0, 0, 0.4458));
 }
 </style>

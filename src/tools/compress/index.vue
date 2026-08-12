@@ -1,0 +1,165 @@
+<template>
+  <div class="tb-section compress-tool">
+    <div class="tb-two-col">
+      <div class="tb-card">
+        <p class="tb-title">源图片</p>
+        <div class="tb-row">
+          <label class="tb-btn image-choose" for="compress-input">选择图片…</label>
+          <input id="compress-input" type="file" accept="image/*" class="image-file-input" @change="onFile" />
+          <span v-if="fileName" class="tb-hint">{{ fileName }}（{{ (sourceSize / 1024).toFixed(1) }} KB）</span>
+        </div>
+        <div class="image-preview">
+          <img v-if="sourceUrl" :src="sourceUrl" alt="源图片" class="image-preview-img" />
+          <p v-else class="tb-hint">选择图片后在此预览…</p>
+        </div>
+      </div>
+
+      <div class="tb-card">
+        <p class="tb-title">压缩设置</p>
+        <div class="tb-row">
+          <span class="tb-row-label">格式</span>
+          <select v-model="format" class="nb-select">
+            <option value="jpeg">JPEG</option>
+            <option value="webp">WebP</option>
+          </select>
+        </div>
+        <div class="tb-row">
+          <span class="tb-row-label">质量</span>
+          <input v-model.number="quality" type="range" min="5" max="95" class="nb-range" />
+          <span class="tb-hint">{{ quality }}%</span>
+        </div>
+        <p v-if="error" class="tb-error">{{ error }}</p>
+      </div>
+    </div>
+
+    <div class="tb-card">
+      <div class="tb-row">
+        <p class="tb-title tb-grow">压缩结果</p>
+        <div v-if="sourceSize && resultSize" class="compress-stats">
+          <span class="compress-stat">{{ (sourceSize / 1024).toFixed(1) }} KB → {{ (resultSize / 1024).toFixed(1) }} KB</span>
+          <span class="compress-saving" :class="{ 'is-worse': savingPct <= 0 }">
+            {{ savingPct >= 0 ? `节省 ${savingPct}%` : `增大 ${-savingPct}%` }}
+          </span>
+        </div>
+        <button type="button" class="tb-btn tb-btn-primary" :disabled="!resultUrl" @click="download">下载</button>
+      </div>
+      <div class="image-preview">
+        <img v-if="resultUrl" :src="resultUrl" alt="压缩结果" class="image-preview-img" />
+        <p v-else class="tb-hint">压缩结果将在此预览…</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from "vue";
+import { loadImageFromFile, drawScaled, canvasToBlob } from "@/utils/image";
+import { downloadBytes } from "@/utils/download";
+
+const sourceUrl = ref("");
+const resultUrl = ref("");
+const fileName = ref("");
+const sourceSize = ref(0);
+const resultSize = ref(0);
+const format = ref<"jpeg" | "webp">("jpeg");
+const quality = ref(60);
+const error = ref("");
+
+let sourceImage: HTMLImageElement | null = null;
+let resultBlob: Blob | null = null;
+
+const mimeOf = computed(() => (format.value === "jpeg" ? "image/jpeg" : "image/webp"));
+const savingPct = computed(() =>
+  sourceSize.value && resultSize.value ? Math.round((1 - resultSize.value / sourceSize.value) * 100) : 0
+);
+
+async function onFile(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  error.value = "";
+  try {
+    sourceImage = await loadImageFromFile(file);
+    sourceUrl.value = URL.createObjectURL(file);
+    fileName.value = file.name;
+    sourceSize.value = file.size;
+    await regenerate();
+  } catch (err) {
+    error.value = (err as Error).message;
+  }
+}
+
+async function regenerate() {
+  if (!sourceImage) return;
+  const canvas = drawScaled(sourceImage, sourceImage.naturalWidth, sourceImage.naturalHeight);
+  resultBlob = await canvasToBlob(canvas, mimeOf.value, quality.value / 100);
+  if (resultUrl.value) URL.revokeObjectURL(resultUrl.value);
+  resultUrl.value = URL.createObjectURL(resultBlob);
+  resultSize.value = resultBlob.size;
+}
+
+watch([format, quality], () => void regenerate());
+
+function download() {
+  if (!resultBlob) return;
+  const base = fileName.value.split(".").slice(0, -1).join(".") || "image";
+  void resultBlob.arrayBuffer().then((buf) => {
+    downloadBytes(new Uint8Array(buf), `${base}.${format.value}`, mimeOf.value);
+  });
+}
+</script>
+
+<style scoped>
+.image-choose {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.image-file-input {
+  display: none;
+}
+
+.nb-range {
+  width: 180px;
+  accent-color: var(--accent-base, #0067c0);
+}
+
+.image-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  background: var(--card-bg-secondary, rgba(246, 246, 246, 0.5));
+  border: 1px solid var(--card-stroke, rgba(0, 0, 0, 0.06));
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.image-preview-img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 4px;
+}
+
+.compress-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.compress-stat {
+  font-size: 13px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.62));
+}
+
+.compress-saving {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f7b0f;
+}
+
+.compress-saving.is-worse {
+  color: #c42b1c;
+}
+</style>

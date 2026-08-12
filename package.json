@@ -14,8 +14,10 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-autostart": "^2.2.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-fs": "^2.2.0",
+    "@tauri-apps/plugin-opener": "^2.2.0",
     "@tauri-apps/plugin-store": "^2.2.0",
     "cron-parser": "^4.9.0",
     "crypto-js": "^4.2.0",

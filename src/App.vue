@@ -48,6 +48,7 @@ import { useHistoryStore } from "@/stores/history";
 import { findToolById, toolModules } from "@/tools/registry";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import WinTitleBar from "@/winui/components/WinTitleBar.vue";
 import WinNavigationView from "@/winui/components/WinNavigationView.vue";
 import WinToolTipService from "@/winui/components/WinToolTipService.vue";
@@ -186,6 +187,13 @@ onMounted(async () => {
   void history.init();
   await setupWindowMemory();
   await applySystemAccent();
+
+  // 将「最小化到托盘」设置同步给 Rust 端（关闭窗口行为）
+  try {
+    await invoke("set_minimize_to_tray", { enabled: settings.minimizeToTray });
+  } catch {
+    /* 非 Tauri 环境忽略 */
+  }
 
   window.addEventListener("keydown", onGlobalKeydown);
 

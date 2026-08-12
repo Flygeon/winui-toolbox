@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 import { load } from "@tauri-apps/plugin-store";
+import { invoke } from "@tauri-apps/api/core";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -23,6 +24,9 @@ export const useSettingsStore = defineStore("settings", () => {
   const rememberWindow = ref(true);
   const resumeLastTool = ref(false);
   const windowBounds = ref<{ x: number; y: number; width: number; height: number } | null>(null);
+  const ffmpegPath = ref<string | null>(null);
+  const ffmpegVersion = ref<string | null>(null);
+  const minimizeToTray = ref(true);
   let store: Awaited<ReturnType<typeof load>> | null = null;
   let initPromise: Promise<void> | null = null;
 
@@ -47,6 +51,8 @@ export const useSettingsStore = defineStore("settings", () => {
       rememberWindow: rememberWindow.value,
       resumeLastTool: resumeLastTool.value,
       windowBounds: windowBounds.value,
+      ffmpegPath: ffmpegPath.value,
+      minimizeToTray: minimizeToTray.value,
     };
     if (store) {
       try {
@@ -81,6 +87,9 @@ export const useSettingsStore = defineStore("settings", () => {
         if (wb && typeof wb === "object" && [wb.x, wb.y, wb.width, wb.height].every((n) => typeof n === "number")) {
           windowBounds.value = wb;
         }
+        const fp = await store.get<string | null>("ffmpegPath");
+        if (typeof fp === "string") ffmpegPath.value = fp;
+        minimizeToTray.value = readBool(await store.get<boolean>("minimizeToTray"));
       } catch {
         store = null;
         const t = localStorage.getItem("toolbox.theme");
@@ -89,6 +98,9 @@ export const useSettingsStore = defineStore("settings", () => {
         sidebarAlwaysExpanded.value = localStorage.getItem("toolbox.sidebarAlwaysExpanded") === "true";
         rememberWindow.value = localStorage.getItem("toolbox.rememberWindow") !== "false";
         resumeLastTool.value = localStorage.getItem("toolbox.resumeLastTool") === "true";
+        const fp = localStorage.getItem("toolbox.ffmpegPath");
+        if (fp && fp !== "null") ffmpegPath.value = fp;
+        minimizeToTray.value = localStorage.getItem("toolbox.minimizeToTray") !== "false";
         try {
           const raw = localStorage.getItem("toolbox.windowBounds");
           if (raw) windowBounds.value = JSON.parse(raw);
@@ -128,6 +140,34 @@ export const useSettingsStore = defineStore("settings", () => {
     await persist();
   }
 
+  /** 记录用户选定的 FFmpeg 路径与版本 */
+  async function setFfmpeg(path: string, version = "") {
+    ffmpegPath.value = path;
+    if (version) ffmpegVersion.value = version;
+    await persist();
+  }
+
+  async function setFfmpegVersion(version: string) {
+    ffmpegVersion.value = version;
+  }
+
+  async function clearFfmpeg() {
+    ffmpegPath.value = null;
+    ffmpegVersion.value = null;
+    await persist();
+  }
+
+  /** 最小化到托盘：持久化 + 通知 Rust 端拦截关闭 */
+  async function setMinimizeToTray(v: boolean) {
+    minimizeToTray.value = v;
+    await persist();
+    try {
+      await invoke("set_minimize_to_tray", { enabled: v });
+    } catch {
+      /* 非 Tauri 环境忽略 */
+    }
+  }
+
   async function saveWindowBounds(b: { x: number; y: number; width: number; height: number }) {
     windowBounds.value = b;
     await persist();
@@ -153,6 +193,9 @@ export const useSettingsStore = defineStore("settings", () => {
     rememberWindow,
     resumeLastTool,
     windowBounds,
+    ffmpegPath,
+    ffmpegVersion,
+    minimizeToTray,
     resolvedTheme,
     init,
     applyTheme,
@@ -161,6 +204,10 @@ export const useSettingsStore = defineStore("settings", () => {
     setSidebarAlwaysExpanded,
     setRememberWindow,
     setResumeLastTool,
+    setFfmpeg,
+    setFfmpegVersion,
+    clearFfmpeg,
+    setMinimizeToTray,
     saveWindowBounds,
     cycleTheme,
   };
