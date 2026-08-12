@@ -79,13 +79,14 @@ import { readFile } from "@tauri-apps/plugin-fs";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
 import { writeClipboard } from "@/utils/clipboard";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
 const hasTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
-const hashInput = ref("");
+const hashInput = usePersistedInput("hash.hashInput");
 const cipher = ref<"AES" | "DES">("AES");
-const cipherKey = ref("");
-const cipherInput = ref("");
+const cipherKey = usePersistedInput("hash.cipherKey");
+const cipherInput = usePersistedInput("hash.cipherInput");
 const cipherOutput = ref("");
 
 const fileInfo = ref("");

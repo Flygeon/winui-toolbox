@@ -63,9 +63,10 @@ import { computed, ref, watch } from "vue";
 import CryptoJS from "crypto-js";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const token = ref("");
-const secret = ref("");
+const token = usePersistedInput("jwt.token");
+const secret = usePersistedInput("jwt.secret");
 const verifyState = ref("");
 const verifyOk = ref(false);
 

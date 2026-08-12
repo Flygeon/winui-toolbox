@@ -39,10 +39,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const unixInput = ref("");
+const unixInput = usePersistedInput("timestamp.unix");
 const unixResult = ref("");
-const dateInput = ref("");
+const dateInput = usePersistedInput("timestamp.date");
 const dateResult = ref("");
 
 function pad(n: number): string {

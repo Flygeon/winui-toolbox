@@ -16,6 +16,7 @@ export interface DiffRow {
 }
 
 function splitLines(s: string): string[] {
+  if (s === "") return [];
   return s.replace(/\r\n/g, "\n").split("\n");
 }
 

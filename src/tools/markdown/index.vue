@@ -35,8 +35,9 @@ import WinTextBox from "@/winui/components/WinTextBox.vue";
 import { markdownToHtml, markdownToDocxBlob, printHtmlToPdf } from "@/utils/markdown-export";
 import { downloadBytes, downloadText } from "@/utils/download";
 import { writeClipboard } from "@/utils/clipboard";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const input = ref("");
+const input = usePersistedInput("markdown.input");
 
 const previewHtml = computed(() => markdownToHtml(input.value));
 const charCount = computed(() => [...input.value].length);

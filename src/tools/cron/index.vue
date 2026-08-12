@@ -44,8 +44,9 @@ import { ref } from "vue";
 import cronParser from "cron-parser";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const expression = ref("*/5 * * * *");
+const expression = usePersistedInput("cron.expression", "*/5 * * * *");
 const error = ref("");
 const explained = ref<{ name: string; raw: string; desc: string }[]>([]);
 const nextDates = ref<string[]>([]);

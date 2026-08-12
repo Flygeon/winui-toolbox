@@ -87,6 +87,7 @@ import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { allTools, toolModules, findToolById, type ToolModuleDef } from "@/tools/registry";
 import { useHistoryStore } from "@/stores/history";
+import { searchTools } from "@/utils/tool-search";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import appIcon from "@/winui/assets/AppIcon-512.png";
 
@@ -97,13 +98,7 @@ const query = ref("");
 
 const readyCount = computed(() => allTools.filter((t) => t.status === "ready").length);
 
-const searchResults = computed(() => {
-  const q = query.value.trim().toLowerCase();
-  if (!q) return [];
-  return allTools
-    .filter((t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.id.includes(q))
-    .slice(0, 12);
-});
+const searchResults = computed(() => searchTools(query.value, 12));
 
 const recentReady = computed(() => history.recent.filter((id) => !!findToolById(id)));
 const favoritesReady = computed(() => history.favorites.filter((id) => !!findToolById(id)));
@@ -403,6 +398,13 @@ onMounted(() => {
   transform: translateY(-50%);
   color: var(--text-tertiary, rgba(0, 0, 0, 0.4458));
   font-size: 14px;
+}
+
+/* 主页图标字形：非 .icon class，需显式指定图标字体栈（否则 Segoe UI 无字形 → 矩形） */
+.home-search-result-icon,
+.home-tool-chip-icon,
+.home-module-icon {
+  font-family: "WinUIOnWebIcons", "Segoe Fluent Icons", "Segoe MDL2 Assets", sans-serif;
 }
 
 @media (max-width: 720px) {

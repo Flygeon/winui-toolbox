@@ -79,6 +79,8 @@ import { computed, ref, watch } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
 import { downloadText } from "@/utils/download";
+import { parseCsv, toCsv, parseMdTable, toMdTable } from "@/utils/csv";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
 type Mode = "csv-json" | "json-csv" | "csv-md" | "md-csv" | "json-md";
 
@@ -92,7 +94,7 @@ const modes: { value: Mode; label: string }[] = [
 
 const mode = ref<Mode>("csv-json");
 const delimiter = ref(",");
-const input = ref("");
+const input = usePersistedInput("tables.input");
 const output = ref("");
 const error = ref("");
 const previewRows = ref<string[][]>([]);
@@ -118,69 +120,6 @@ const outputTitle = computed(() => {
   };
   return t[mode.value];
 });
-
-// ---- CSV 解析 / 序列化 ----
-function parseCsv(text: string, delim: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === delim) {
-      row.push(field);
-      field = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(field);
-      field = "";
-      rows.push(row);
-      row = [];
-    } else field += c;
-  }
-  if (field !== "" || row.length) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows.filter((r) => !(r.length === 1 && r[0].trim() === ""));
-}
-
-function escapeCsvField(v: string, delim: string): string {
-  if (/["\n\r]/.test(v) || v.includes(delim)) return `"${v.replace(/"/g, '""')}"`;
-  return v;
-}
-
-function toCsv(rows: string[][], delim: string): string {
-  return rows.map((r) => r.map((c) => escapeCsvField(c, delim)).join(delim)).join("\n");
-}
-
-// ---- Markdown 表格解析 ----
-function parseMdTable(text: string): string[][] {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith("|"));
-  const rows = lines
-    .filter((l) => !/^\|[\s:|-]+\|$/.test(l)) // 去掉分隔行 |---|---|
-    .map((l) => l.replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim()));
-  return rows;
-}
-
-function toMdTable(rows: string[][]): string {
-  if (!rows.length) return "";
-  const colCount = Math.max(...rows.map((r) => r.length));
-  const pad = (r: string[]) => Array.from({ length: colCount }, (_, i) => r[i] ?? "").map((c) => c.replace(/\|/g, "\\|"));
-  const header = `| ${pad(rows[0]).join(" | ")} |`;
-  const sep = `| ${Array.from({ length: colCount }, () => "---").join(" | ")} |`;
-  const body = rows.slice(1).map((r) => `| ${pad(r).join(" | ")} |`);
-  return [header, sep, ...body].join("\n");
-}
 
 // ---- 转换 ----
 function convert() {

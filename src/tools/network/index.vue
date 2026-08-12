@@ -42,6 +42,8 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
+import { calcSubnet } from "@/utils/ip";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
 const localIps = ref<string[]>([]);
 const scanning = ref(false);
@@ -82,19 +84,9 @@ function scanLocal() {
 }
 
 // ---- 子网计算 ----
-const cidrInput = ref("192.168.1.0/24");
+const cidrInput = usePersistedInput("network.cidr", "192.168.1.0/24");
 const subnetError = ref("");
 const subnet = ref<Record<string, string> | null>(null);
-
-function ipv4ToLong(ip: string): number | null {
-  const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return null;
-  return ((((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0));
-}
-
-function longToIpv4(n: number): string {
-  return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
-}
 
 function calc() {
   subnetError.value = "";
@@ -104,23 +96,17 @@ function calc() {
     subnetError.value = "格式应为 IP/CIDR，例如 192.168.1.0/24。";
     return;
   }
-  const ip = ipv4ToLong(m[1]);
-  const prefix = Number(m[2]);
-  if (ip === null || prefix > 32) {
+  const result = calcSubnet(m[1], Number(m[2]));
+  if (!result) {
     subnetError.value = "IP 或前缀无效。";
     return;
   }
-  const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
-  const network = ip & mask;
-  const broadcast = network | (~mask >>> 0);
-  const hosts = prefix >= 31 ? (prefix === 32 ? 1 : 2) : Math.max(0, broadcast - network - 1);
-
   subnet.value = {
-    网络地址: `${longToIpv4(network)}/${prefix}`,
-    子网掩码: longToIpv4(mask),
-    广播地址: longToIpv4(broadcast),
-    可用地址: prefix >= 31 ? `${longToIpv4(network)}` : `${longToIpv4(network + 1)} ~ ${longToIpv4(broadcast - 1)}`,
-    可用主机数: prefix >= 31 ? `${hosts}` : `${hosts}（含网关则 ${hosts - 1}）`,
+    网络地址: `${result.network}/${Number(m[2])}`,
+    子网掩码: result.mask,
+    广播地址: result.broadcast,
+    可用地址: Number(m[2]) >= 31 ? `${result.firstUsable}` : `${result.firstUsable} ~ ${result.lastUsable}`,
+    可用主机数: Number(m[2]) >= 31 ? `${result.hostCount}` : `${result.hostCount}（含网关则 ${result.hostCount - 1}）`,
   };
 }
 

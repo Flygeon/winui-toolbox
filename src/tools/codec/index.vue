@@ -55,6 +55,7 @@
 import { ref } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
 type CodecType = "base64" | "url" | "html";
 
@@ -66,7 +67,7 @@ const codecs: { value: CodecType; label: string }[] = [
 
 const codec = ref<CodecType>("base64");
 const preserveUrl = ref(false);
-const input = ref("");
+const input = usePersistedInput("codec.input");
 const output = ref("");
 const error = ref("");
 

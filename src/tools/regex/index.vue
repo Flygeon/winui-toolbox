@@ -59,11 +59,12 @@
 import { ref, watch } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const pattern = ref("");
-const flags = ref("gi");
-const text = ref("");
-const replacement = ref("");
+const pattern = usePersistedInput("regex.pattern", "");
+const flags = usePersistedInput("regex.flags", "gi");
+const text = usePersistedInput("regex.text");
+const replacement = usePersistedInput("regex.replacement");
 const replaceResult = ref("");
 
 const regexError = ref("");

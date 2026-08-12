@@ -114,9 +114,10 @@ import { reactive, ref, watch } from "vue";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
 const qrType = ref<"text" | "wifi">("text");
-const qrText = ref("https://example.com");
+const qrText = usePersistedInput("qrcode.text", "https://example.com");
 const wifi = reactive({ ssid: "", password: "", encryption: "WPA" });
 const ecLevel = ref<"L" | "M" | "Q" | "H">("M");
 const qrSize = ref(320);

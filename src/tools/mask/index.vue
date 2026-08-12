@@ -42,8 +42,9 @@
 import { ref } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import CopyButton from "@/components/CopyButton.vue";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const input = ref("");
+const input = usePersistedInput("mask.input");
 const output = ref("");
 const count = ref(0);
 

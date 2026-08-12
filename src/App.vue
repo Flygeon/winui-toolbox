@@ -1,5 +1,6 @@
 <template>
   <WinToolTipService />
+  <GlobalSearch :open="searchOpen" @close="searchOpen = false" />
   <div class="app-root">
     <WinTitleBar
       class="app-titlebar"
@@ -29,9 +30,9 @@
         @ItemInvoked="onItemInvoked">
         <router-view v-slot="{ Component }">
           <Transition name="page" mode="out-in">
-            <div class="page-view" :key="route.fullPath">
-              <component :is="Component" />
-            </div>
+            <KeepAlive>
+              <component :is="Component" :key="pageKey" />
+            </KeepAlive>
           </Transition>
         </router-view>
       </WinNavigationView>
@@ -40,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useSettingsStore } from "@/stores/settings";
 import { useHistoryStore } from "@/stores/history";
@@ -52,6 +53,8 @@ import WinNavigationView from "@/winui/components/WinNavigationView.vue";
 import WinToolTipService from "@/winui/components/WinToolTipService.vue";
 import ThemeButton from "@/components/ThemeButton.vue";
 import WindowControls from "@/components/WindowControls.vue";
+import GlobalSearch from "@/components/GlobalSearch.vue";
+import { applySystemAccent } from "@/utils/accent";
 import appIcon from "@/winui/assets/AppIcon-512.png";
 
 const settings = useSettingsStore();
@@ -59,10 +62,15 @@ const history = useHistoryStore();
 const route = useRoute();
 const router = useRouter();
 
+const searchOpen = ref(false);
+
 const hasTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 const HOME_ITEM = { Tag: "home", Icon: "", Content: "主页" };
 const SETTINGS_ITEM = { Tag: "settings", Icon: "", Content: "设置" };
+
+/** 按「页面类别」缓存组件：工具区统一缓存为一份，切到主页/设置再回来不丢输入 */
+const pageKey = computed(() => (route.name === "tool" ? "tool" : String(route.name ?? "page")));
 
 const navMenuItems = computed(() => [
   HOME_ITEM,
@@ -177,12 +185,28 @@ onMounted(async () => {
   await settings.init();
   void history.init();
   await setupWindowMemory();
+  await applySystemAccent();
+
+  window.addEventListener("keydown", onGlobalKeydown);
 
   // 记住最后使用的工具：设置开启时，启动直接跳到上次的工具
   if (settings.resumeLastTool && history.lastTool && findToolById(history.lastTool)) {
     if (route.name === "home") void router.replace(`/${history.lastTool}`);
   }
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onGlobalKeydown);
+  windowUnlisten.forEach((fn) => fn());
+});
+
+function onGlobalKeydown(e: KeyboardEvent) {
+  // Ctrl+K / Ctrl+P 唤起全局搜索
+  if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K" || e.key === "p" || e.key === "P")) {
+    e.preventDefault();
+    searchOpen.value = true;
+  }
+}
 </script>
 
 <style scoped>
@@ -213,13 +237,6 @@ onMounted(async () => {
 .app-content :deep(.win-nav-shell) {
   width: 100%;
   height: 100%;
-}
-
-.page-view {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
 }
 
 .page-enter-active,

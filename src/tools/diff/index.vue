@@ -60,9 +60,10 @@ import { computed, ref } from "vue";
 import WinTextBox from "@/winui/components/WinTextBox.vue";
 import { diffLines, diffToRows, diffToText, type DiffRow } from "@/utils/diff";
 import { writeClipboard } from "@/utils/clipboard";
+import { usePersistedInput } from "@/composables/usePersistedInput";
 
-const textA = ref("");
-const textB = ref("");
+const textA = usePersistedInput("diff.textA");
+const textB = usePersistedInput("diff.textB");
 
 const rows = computed<DiffRow[]>(() => diffToRows(diffLines(textA.value, textB.value)));
 
