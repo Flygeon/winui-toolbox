@@ -132,30 +132,30 @@ export async function readFileBytes(file: Blob): Promise<number[]> {
 }
 
 /** 将 Rust 返回的字节数组转为 Uint8Array */
-function toUint8(bytes: number[]): Uint8Array {
+function toUint8(bytes: number[]): Uint8Array<ArrayBuffer> {
   return new Uint8Array(bytes);
 }
 
 /** 格式转码（Rust 后端） */
-export async function convertImage(args: ConvertArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+export async function convertImage(args: ConvertArgs): Promise<{ bytes: Uint8Array<ArrayBuffer>; width: number; height: number }> {
   const result = await invoke<ConvertResult>("image_convert", { args });
   return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
 }
 
 /** 压缩图片（Rust 后端） */
-export async function compressImage(args: CompressArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+export async function compressImage(args: CompressArgs): Promise<{ bytes: Uint8Array<ArrayBuffer>; width: number; height: number }> {
   const result = await invoke<ConvertResult>("image_compress", { args });
   return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
 }
 
 /** 图像变换（Rust 后端） */
-export async function transformImage(args: TransformArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+export async function transformImage(args: TransformArgs): Promise<{ bytes: Uint8Array<ArrayBuffer>; width: number; height: number }> {
   const result = await invoke<ConvertResult>("image_transform", { args });
   return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
 }
 
 /** 图像调整（Rust 后端） */
-export async function adjustImage(args: AdjustArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+export async function adjustImage(args: AdjustArgs): Promise<{ bytes: Uint8Array<ArrayBuffer>; width: number; height: number }> {
   const result = await invoke<ConvertResult>("image_adjust", { args });
   return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
 }
@@ -166,7 +166,7 @@ export async function readExif(bytes: number[]): Promise<ExifReadResult> {
 }
 
 /** 剥离 EXIF（Rust 后端） */
-export async function stripExif(bytes: number[]): Promise<Uint8Array> {
+export async function stripExif(bytes: number[]): Promise<Uint8Array<ArrayBuffer>> {
   const result = await invoke<number[]>("exif_strip", { bytes });
   return toUint8(result);
 }
