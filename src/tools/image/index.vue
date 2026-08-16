@@ -22,9 +22,14 @@
             <option value="png">PNG（无损）</option>
             <option value="jpeg">JPEG</option>
             <option value="webp">WebP</option>
+            <option value="bmp">BMP</option>
+            <option value="tiff">TIFF</option>
+            <option value="gif">GIF</option>
+            <option value="ico">ICO</option>
+            <option value="qoi">QOI</option>
           </select>
         </div>
-        <div v-if="format !== 'png'" class="tb-row">
+        <div v-if="format !== 'png' && format !== 'bmp' && format !== 'tiff' && format !== 'gif' && format !== 'ico' && format !== 'qoi'" class="tb-row">
           <span class="tb-row-label">质量</span>
           <input v-model.number="quality" type="range" min="10" max="100" class="nb-range" />
           <span class="tb-hint">{{ quality }}%</span>
@@ -54,8 +59,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { loadImageFromFile, drawScaled, canvasToBlob } from "@/utils/image";
+import { ref, watch } from "vue";
+import { convertImageAuto, formatToMime, formatToExt, type ConvertFormat } from "@/utils/image";
 import { saveFileBytes } from "@/utils/file-save";
 import DownloadedBar from "@/components/DownloadedBar.vue";
 
@@ -65,15 +70,13 @@ const fileName = ref("");
 const sourceSize = ref(0);
 const resultSize = ref(0);
 const savedPath = ref<string | null>(null);
-const format = ref<"png" | "jpeg" | "webp">("png");
+const format = ref<ConvertFormat>("png");
 const quality = ref(90);
 const maxWidth = ref(0);
 const error = ref("");
 
-let sourceImage: HTMLImageElement | null = null;
+let sourceFile: Blob | null = null;
 let resultBlob: Blob | null = null;
-
-const mimeOf = computed(() => (format.value === "png" ? "image/png" : format.value === "jpeg" ? "image/jpeg" : "image/webp"));
 
 async function onFile(e: Event) {
   const input = e.target as HTMLInputElement;
@@ -82,7 +85,8 @@ async function onFile(e: Event) {
   error.value = "";
   savedPath.value = null;
   try {
-    sourceImage = await loadImageFromFile(file);
+    sourceFile = file;
+    if (sourceUrl.value) URL.revokeObjectURL(sourceUrl.value);
     sourceUrl.value = URL.createObjectURL(file);
     fileName.value = file.name;
     sourceSize.value = file.size;
@@ -93,13 +97,16 @@ async function onFile(e: Event) {
 }
 
 async function regenerate() {
-  if (!sourceImage) return;
-  const maxW = maxWidth.value > 0 ? maxWidth.value : sourceImage.naturalWidth;
-  const canvas = drawScaled(sourceImage, maxW, maxW * 10);
-  resultBlob = await canvasToBlob(canvas, mimeOf.value, quality.value / 100);
-  if (resultUrl.value) URL.revokeObjectURL(resultUrl.value);
-  resultUrl.value = URL.createObjectURL(resultBlob);
-  resultSize.value = resultBlob.size;
+  if (!sourceFile) return;
+  try {
+    const { blob } = await convertImageAuto(sourceFile, format.value, quality.value, maxWidth.value);
+    resultBlob = blob;
+    if (resultUrl.value) URL.revokeObjectURL(resultUrl.value);
+    resultUrl.value = URL.createObjectURL(blob);
+    resultSize.value = blob.size;
+  } catch (err) {
+    error.value = (err as Error).message;
+  }
 }
 
 watch([format, quality, maxWidth], () => {
@@ -109,8 +116,10 @@ watch([format, quality, maxWidth], () => {
 async function download() {
   if (!resultBlob) return;
   const base = fileName.value.split(".").slice(0, -1).join(".") || "image";
+  const ext = formatToExt(format.value);
+  const mime = formatToMime(format.value);
   const bytes = new Uint8Array(await resultBlob.arrayBuffer());
-  savedPath.value = await saveFileBytes(bytes, `${base}.${format.value}`, mimeOf.value);
+  savedPath.value = await saveFileBytes(bytes, `${base}.${ext}`, mime);
 }
 </script>
 

@@ -1,4 +1,18 @@
-/** Canvas 图片处理工具（纯前端，用于格式转换 / 压缩 / 图标生成） */
+/**
+ * 图像处理工具封装（Rust 后端优先，Canvas 降级）。
+ *
+ * Tauri 环境下调用 Rust 命令（image_ops.rs）；
+ * 纯浏览器环境（开发预览）降级为 Canvas 方案。
+ */
+
+import { invoke } from "@tauri-apps/api/core";
+
+/** 是否在 Tauri 环境（有 invoke 通道） */
+function isTauri(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+// ---------- Canvas 降级实现（保留原 utils/image.ts 的能力） ----------
 
 export function loadImageFromFile(file: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -51,4 +65,164 @@ export function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality = 
       quality
     );
   });
+}
+
+// ---------- Rust 后端类型定义 ----------
+
+export type ConvertFormat = "png" | "jpeg" | "webp" | "bmp" | "tiff" | "gif" | "ico" | "qoi";
+
+export interface ConvertArgs {
+  bytes: number[];
+  format: ConvertFormat;
+  quality?: number;
+  maxWidth?: number;
+}
+
+export interface ConvertResult {
+  bytes: number[];
+  width: number;
+  height: number;
+}
+
+export interface CompressArgs {
+  bytes: number[];
+  format: ConvertFormat;
+  quality?: number;
+  oxipngLevel?: number;
+  pngColors?: number;
+}
+
+export interface TransformArgs {
+  bytes: number[];
+  rotate?: number;
+  flipH?: boolean;
+  flipV?: boolean;
+  crop?: [number, number, number, number] | null;
+  resizeW?: number;
+  resizeH?: number;
+}
+
+export interface AdjustArgs {
+  bytes: number[];
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  hue?: number;
+  gamma?: number;
+  temperature?: number;
+  format?: ConvertFormat;
+  quality?: number;
+}
+
+export interface ExifField {
+  tag: string;
+  value: string;
+}
+
+export interface ExifReadResult {
+  fields: ExifField[];
+}
+
+// ---------- Rust 后端封装 ----------
+
+/** 读取文件为字节数组 */
+export async function readFileBytes(file: Blob): Promise<number[]> {
+  const buf = await file.arrayBuffer();
+  return Array.from(new Uint8Array(buf));
+}
+
+/** 将 Rust 返回的字节数组转为 Uint8Array */
+function toUint8(bytes: number[]): Uint8Array {
+  return new Uint8Array(bytes);
+}
+
+/** 格式转码（Rust 后端） */
+export async function convertImage(args: ConvertArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+  const result = await invoke<ConvertResult>("image_convert", { args });
+  return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
+}
+
+/** 压缩图片（Rust 后端） */
+export async function compressImage(args: CompressArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+  const result = await invoke<ConvertResult>("image_compress", { args });
+  return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
+}
+
+/** 图像变换（Rust 后端） */
+export async function transformImage(args: TransformArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+  const result = await invoke<ConvertResult>("image_transform", { args });
+  return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
+}
+
+/** 图像调整（Rust 后端） */
+export async function adjustImage(args: AdjustArgs): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+  const result = await invoke<ConvertResult>("image_adjust", { args });
+  return { bytes: toUint8(result.bytes), width: result.width, height: result.height };
+}
+
+/** 读取 EXIF（Rust 后端） */
+export async function readExif(bytes: number[]): Promise<ExifReadResult> {
+  return await invoke<ExifReadResult>("exif_read", { bytes });
+}
+
+/** 剥离 EXIF（Rust 后端） */
+export async function stripExif(bytes: number[]): Promise<Uint8Array> {
+  const result = await invoke<number[]>("exif_strip", { bytes });
+  return toUint8(result);
+}
+
+/** 感知哈希（Rust 后端） */
+export async function phash(bytes: number[]): Promise<string> {
+  return await invoke<string>("image_phash", { bytes });
+}
+
+// ---------- 统一入口：Tauri 优先，Canvas 降级 ----------
+
+/**
+ * 格式转码统一入口。
+ * Tauri 环境走 Rust；纯浏览器降级 Canvas（仅支持 png/jpeg/webp）。
+ */
+export async function convertImageAuto(
+  file: Blob,
+  format: ConvertFormat,
+  quality = 90,
+  maxWidth = 0
+): Promise<{ blob: Blob; width: number; height: number }> {
+  if (isTauri()) {
+    const bytes = await readFileBytes(file);
+    const { bytes: out, width, height } = await convertImage({ bytes, format, quality, maxWidth });
+    const mime = formatToMime(format);
+    return { blob: new Blob([out], { type: mime }), width, height };
+  }
+  // Canvas 降级
+  const img = await loadImageFromFile(file);
+  const canvas = drawScaled(img, maxWidth > 0 ? maxWidth : img.naturalWidth, maxWidth > 0 ? maxWidth * 10 : img.naturalHeight);
+  const mime = formatToMime(format);
+  if (format !== "png" && format !== "jpeg" && format !== "webp") {
+    throw new Error(`浏览器环境不支持 ${format} 格式，请在 Tauri 环境中使用。`);
+  }
+  const blob = await canvasToBlob(canvas, mime, quality / 100);
+  return { blob, width: canvas.width, height: canvas.height };
+}
+
+/** 格式转 MIME */
+export function formatToMime(format: ConvertFormat): string {
+  switch (format) {
+    case "png": return "image/png";
+    case "jpeg": return "image/jpeg";
+    case "webp": return "image/webp";
+    case "bmp": return "image/bmp";
+    case "tiff": return "image/tiff";
+    case "gif": return "image/gif";
+    case "ico": return "image/x-icon";
+    case "qoi": return "image/x-qoi";
+  }
+}
+
+/** 格式转文件扩展名 */
+export function formatToExt(format: ConvertFormat): string {
+  switch (format) {
+    case "jpeg": return "jpg";
+    default: return format;
+  }
 }

@@ -6,6 +6,8 @@ use tauri::{
     Manager, WindowEvent,
 };
 
+mod image_ops;
+
 /// 应用运行状态（跨命令共享）
 struct AppState {
     minimize_to_tray: AtomicBool,
@@ -364,6 +366,13 @@ pub fn run() {
             list_user_env_vars,
             set_user_env_var,
             delete_user_env_var,
+            image_ops::image_convert,
+            image_ops::image_compress,
+            image_ops::image_transform,
+            image_ops::image_adjust,
+            image_ops::exif_read,
+            image_ops::exif_strip,
+            image_ops::image_phash,
         ])
         .setup(|app| {
             setup_tray(app.handle())?;

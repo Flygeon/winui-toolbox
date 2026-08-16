@@ -21,12 +21,18 @@
           <select v-model="format" class="nb-select">
             <option value="jpeg">JPEG</option>
             <option value="webp">WebP</option>
+            <option value="png">PNG（无损优化）</option>
           </select>
         </div>
-        <div class="tb-row">
+        <div v-if="format !== 'png'" class="tb-row">
           <span class="tb-row-label">质量</span>
           <input v-model.number="quality" type="range" min="5" max="95" class="nb-range" />
           <span class="tb-hint">{{ quality }}%</span>
+        </div>
+        <div v-if="format === 'png'" class="tb-row">
+          <span class="tb-row-label">优化级别</span>
+          <input v-model.number="oxipngLevel" type="range" min="0" max="6" class="nb-range" />
+          <span class="tb-hint">{{ oxipngLevel }}（0=关闭 OxiPNG）</span>
         </div>
         <p v-if="error" class="tb-error">{{ error }}</p>
       </div>
@@ -54,9 +60,14 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { loadImageFromFile, drawScaled, canvasToBlob } from "@/utils/image";
+import { invoke } from "@tauri-apps/api/core";
+import { loadImageFromFile, drawScaled, canvasToBlob, formatToMime, formatToExt, readFileBytes, type ConvertFormat } from "@/utils/image";
 import { saveFileBytes } from "@/utils/file-save";
 import DownloadedBar from "@/components/DownloadedBar.vue";
+
+function isTauri(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
 
 const sourceUrl = ref("");
 const resultUrl = ref("");
@@ -64,14 +75,14 @@ const fileName = ref("");
 const sourceSize = ref(0);
 const resultSize = ref(0);
 const savedPath = ref<string | null>(null);
-const format = ref<"jpeg" | "webp">("jpeg");
+const format = ref<ConvertFormat>("jpeg");
 const quality = ref(60);
+const oxipngLevel = ref(3);
 const error = ref("");
 
-let sourceImage: HTMLImageElement | null = null;
+let sourceFile: Blob | null = null;
 let resultBlob: Blob | null = null;
 
-const mimeOf = computed(() => (format.value === "jpeg" ? "image/jpeg" : "image/webp"));
 const savingPct = computed(() =>
   sourceSize.value && resultSize.value ? Math.round((1 - resultSize.value / sourceSize.value) * 100) : 0
 );
@@ -83,7 +94,8 @@ async function onFile(e: Event) {
   error.value = "";
   savedPath.value = null;
   try {
-    sourceImage = await loadImageFromFile(file);
+    sourceFile = file;
+    if (sourceUrl.value) URL.revokeObjectURL(sourceUrl.value);
     sourceUrl.value = URL.createObjectURL(file);
     fileName.value = file.name;
     sourceSize.value = file.size;
@@ -94,21 +106,45 @@ async function onFile(e: Event) {
 }
 
 async function regenerate() {
-  if (!sourceImage) return;
-  const canvas = drawScaled(sourceImage, sourceImage.naturalWidth, sourceImage.naturalHeight);
-  resultBlob = await canvasToBlob(canvas, mimeOf.value, quality.value / 100);
-  if (resultUrl.value) URL.revokeObjectURL(resultUrl.value);
-  resultUrl.value = URL.createObjectURL(resultBlob);
-  resultSize.value = resultBlob.size;
+  if (!sourceFile) return;
+  try {
+    if (isTauri()) {
+      const bytes = await readFileBytes(sourceFile);
+      const result = await invoke<{ bytes: number[]; width: number; height: number }>("image_compress", {
+        args: {
+          bytes,
+          format: format.value,
+          quality: quality.value,
+          oxipngLevel: oxipngLevel.value,
+          pngColors: 0,
+        },
+      });
+      const out = new Uint8Array(result.bytes);
+      resultBlob = new Blob([out], { type: formatToMime(format.value) });
+    } else {
+      // Canvas 降级（仅 jpeg/webp）
+      const img = await loadImageFromFile(sourceFile);
+      const canvas = drawScaled(img, img.naturalWidth, img.naturalHeight);
+      const mime = format.value === "png" ? "image/png" : formatToMime(format.value);
+      resultBlob = await canvasToBlob(canvas, mime, quality.value / 100);
+    }
+    if (resultUrl.value) URL.revokeObjectURL(resultUrl.value);
+    resultUrl.value = URL.createObjectURL(resultBlob);
+    resultSize.value = resultBlob.size;
+  } catch (err) {
+    error.value = (err as Error).message;
+  }
 }
 
-watch([format, quality], () => void regenerate());
+watch([format, quality, oxipngLevel], () => void regenerate());
 
 async function download() {
   if (!resultBlob) return;
   const base = fileName.value.split(".").slice(0, -1).join(".") || "image";
+  const ext = formatToExt(format.value);
+  const mime = formatToMime(format.value);
   const bytes = new Uint8Array(await resultBlob.arrayBuffer());
-  savedPath.value = await saveFileBytes(bytes, `${base}.${format.value}`, mimeOf.value);
+  savedPath.value = await saveFileBytes(bytes, `${base}.${ext}`, mime);
 }
 </script>
 

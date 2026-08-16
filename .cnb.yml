@@ -1,0 +1,73 @@
+## CNB 构建工作流（与 .github/workflows/build.yml 并存）
+##
+## 触发：push 到 main / 打标签 v*
+## 产物：NSIS 安装包（.exe）+ MSI（.msi）收集在 src-tauri/target/release/bundle/ 下
+##
+## 与 GitHub Actions 并存，两套工作流独立触发，互不影响。
+## FFmpeg 不内置打包，由用户自行下载并在设置中选择启用。
+
+main:
+  push:
+    - name: build-windows
+      runner:
+        cpus: 8
+      docker:
+        image: node:20
+      services:
+        - docker
+      env:
+        CARGO_INCREMENTAL: "0"
+        RUST_BACKTRACE: "1"
+      stages:
+        - name: install-rust
+          script: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            source "$HOME/.cargo/env"
+            rustc --version
+            cargo --version
+
+        - name: install-node-deps
+          script: npm ci
+
+        - name: type-check-frontend
+          script: npm run build
+
+        - name: build-tauri
+          script: |
+            source "$HOME/.cargo/env"
+            npx tauri build --bundles nsis,msi
+            echo "==> 构建产物："
+            ls -lh src-tauri/target/release/bundle/nsis/ 2>/dev/null || true
+            ls -lh src-tauri/target/release/bundle/msi/ 2>/dev/null || true
+
+# 仓库级事件（tag_push）放在 $ 兜底分支下
+$:
+  tag_push:
+    - name: release-windows
+      runner:
+        cpus: 8
+      docker:
+        image: node:20
+      services:
+        - docker
+      env:
+        CARGO_INCREMENTAL: "0"
+      stages:
+        - name: install-rust
+          script: |
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+            source "$HOME/.cargo/env"
+
+        - name: install-node-deps
+          script: npm ci
+
+        - name: build-frontend
+          script: npm run build
+
+        - name: build-tauri-release
+          script: |
+            source "$HOME/.cargo/env"
+            npx tauri build --bundles nsis,msi
+            echo "==> Release 产物（${CNB_BRANCH}）："
+            ls -lh src-tauri/target/release/bundle/nsis/ 2>/dev/null || true
+            ls -lh src-tauri/target/release/bundle/msi/ 2>/dev/null || true

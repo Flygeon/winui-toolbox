@@ -27,6 +27,9 @@ src-tauri/Cargo.lock.orig
 .DS_Store
 Thumbs.db
 
+# WinUIonWeb 参考模板（仅作参考，不纳入版本管理）
+WinUIonWeb模板/
+
 # Logs
 logs/
 *.log
