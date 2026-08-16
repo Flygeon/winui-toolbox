@@ -47,7 +47,7 @@ fn encode_image(img: &DynamicImage, fmt: ImageFormat, quality: u8) -> Result<Vec
     let mut buf = std::io::Cursor::new(Vec::new());
     match fmt {
         ImageFormat::Jpeg => {
-            let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, quality);
+            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, quality);
             let rgb = image::DynamicImage::ImageRgba8(img.to_rgba8()).to_rgb8();
             encoder
                 .encode(&rgb, rgb.width(), rgb.height(), image::ExtendedColorType::Rgb8)
